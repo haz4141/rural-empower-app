@@ -1,10 +1,8 @@
-// Import the functions you need from the SDKs you need
+// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore"; // ✅ Firestore added
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCa5lMK92WxpgFKxE9gcu-J0220yknWkfI",
   authDomain: "ruralempowerapp.firebaseapp.com",
@@ -17,6 +15,5 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 export const auth = getAuth(app);
-export const db = getFirestore(app); // ✅ Export Firestore instance
+export const db = getFirestore(app);
