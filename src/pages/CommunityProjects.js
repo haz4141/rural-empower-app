@@ -16,8 +16,6 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
-import { initDB, saveProject, getProjects, deleteProject } from '../database/sqliteConnection';
-import { Capacitor } from '@capacitor/core';
 import '../styles.css';
 
 function CommunityProjects() {
@@ -29,64 +27,44 @@ function CommunityProjects() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const setup = async () => {
-      if (Capacitor.getPlatform() !== 'web') {
-        await initDB();
-        const result = await getProjects();
-        setProjects(result.values || []);
-      } else {
-        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-          setUser(currentUser);
-          if (currentUser) {
-            const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-            const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
-              const fetched = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              setProjects(fetched);
-            });
-            return unsubscribeFirestore;
-          }
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+        const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+          const fetched = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setProjects(fetched);
         });
-        return () => unsubscribeAuth();
+        return unsubscribeFirestore;
+      } else {
+        setProjects([]);
       }
-    };
+    });
 
-    setup();
+    return () => unsubscribeAuth();
   }, []);
 
   const handleAddProject = async (e) => {
     e.preventDefault();
 
-    if (Capacitor.getPlatform() !== 'web') {
-      if (editingProject) {
-        await window.sqliteConnection.run(
-          'UPDATE community_projects SET title = ?, description = ? WHERE id = ?',
-          [title, desc, editingProject.ID]
-        );
-      } else {
-        await saveProject(title, desc);
-      }
-      const result = await getProjects();
-      setProjects(result.values || []);
-    } else {
-      if (!user) {
-        alert('You must be logged in to post a project.');
-        return;
-      }
+    if (!user) {
+      alert('You must be logged in to post a project.');
+      return;
+    }
 
-      if (editingProject) {
-        const projectDoc = doc(db, 'projects', editingProject.id);
-        await updateDoc(projectDoc, { title, desc });
-      } else {
-        await addDoc(collection(db, 'projects'), {
-          title,
-          desc,
-          userEmail: user.email,
-          createdAt: serverTimestamp()
-        });
-      }
+    if (editingProject) {
+      const projectDoc = doc(db, 'projects', editingProject.id);
+      await updateDoc(projectDoc, { title, desc });
+    } else {
+      await addDoc(collection(db, 'projects'), {
+        title,
+        desc,
+        userEmail: user.email,
+        createdAt: serverTimestamp()
+      });
     }
 
     setTitle('');
@@ -104,26 +82,20 @@ function CommunityProjects() {
     const confirmDelete = window.confirm(`Are you sure you want to delete "${proj.title}"?`);
     if (!confirmDelete) return;
 
-    if (Capacitor.getPlatform() !== 'web') {
-      await deleteProject(proj.ID);
-      const result = await getProjects();
-      setProjects(result.values || []);
-    } else {
-      try {
-        const projectDocRef = doc(db, 'projects', proj.id);
-        await deleteDoc(projectDocRef);
+    try {
+      const projectDocRef = doc(db, 'projects', proj.id);
+      await deleteDoc(projectDocRef);
 
-        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
-        const fetched = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setProjects(fetched);
-      } catch (error) {
-        console.error('Error deleting project:', error);
-        alert('Failed to delete project.');
-      }
+      const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const fetched = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProjects(fetched);
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Failed to delete project.');
     }
   };
 
@@ -179,7 +151,7 @@ function CommunityProjects() {
             <p className="text-sm text-gray-500 text-center">No community projects yet.</p>
           ) : (
             projects.map((proj) => (
-              <div key={proj.id || proj.ID} className="learning-card">
+              <div key={proj.id} className="learning-card">
                 <h3 style={{ fontWeight: '600', marginBottom: '4px' }}>{proj.title}</h3>
                 <p style={{ color: '#444', fontSize: '14px', marginBottom: '6px' }}>
                   {proj.desc || proj.description}
