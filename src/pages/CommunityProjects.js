@@ -18,6 +18,26 @@ import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
 import '../styles.css';
 
+// ✅ OOP: Inheritance & Polymorphism Example
+class User {
+  constructor(name) {
+    this.name = name;
+  }
+  accessLevel() {
+    return `${this.name} has basic access.`;
+  }
+}
+
+class AdminUser extends User {
+  constructor(name, level) {
+    super(name);
+    this.level = level;
+  }
+  accessLevel() {
+    return `${this.name} has ADMIN access with level ${this.level}.`;
+  }
+}
+
 function CommunityProjects() {
   const [projects, setProjects] = useState([]);
   const [title, setTitle] = useState('');
@@ -44,6 +64,13 @@ function CommunityProjects() {
       }
     });
 
+    // ✅ OOP demo logs
+    const regular = new User("Ali");
+    const admin = new AdminUser("Hazami", "Full");
+
+    console.log(regular.accessLevel()); // Output: Ali has basic access.
+    console.log(admin.accessLevel());   // Output: Hazami has ADMIN access with level Full.
+
     return () => unsubscribeAuth();
   }, []);
 
@@ -55,21 +82,26 @@ function CommunityProjects() {
       return;
     }
 
-    if (editingProject) {
-      const projectDoc = doc(db, 'projects', editingProject.id);
-      await updateDoc(projectDoc, { title, desc });
-    } else {
-      await addDoc(collection(db, 'projects'), {
-        title,
-        desc,
-        userEmail: user.email,
-        createdAt: serverTimestamp()
-      });
-    }
+    try {
+      if (editingProject) {
+        const projectDoc = doc(db, 'projects', editingProject.id);
+        await updateDoc(projectDoc, { title, desc });
+      } else {
+        await addDoc(collection(db, 'projects'), {
+          title,
+          desc,
+          userEmail: user.email,
+          createdAt: serverTimestamp()
+        });
+      }
 
-    setTitle('');
-    setDesc('');
-    setEditingProject(null);
+      setTitle('');
+      setDesc('');
+      setEditingProject(null);
+    } catch (err) {
+      console.error("Error saving project:", err);
+      alert("An error occurred while saving.");
+    }
   };
 
   const handleEditProject = (proj) => {
